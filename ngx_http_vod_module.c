@@ -5705,9 +5705,11 @@ ngx_http_vod_handler(ngx_http_request_t *r)
 
 		ngx_md5_final(request_key, &md5);
 
-		// check if we should bypass response cache for mapping-dependent requests when vod_mapping_cache is off
+		// check if we should bypass response cache for master playlist requests when vod_mapping_cache is off
 		if (conf->mapping_cache[0] == NULL && 
-			request->handle_metadata_request != NULL)
+			request != NULL && 
+			(request->handle_metadata_request != NULL || 
+			 (request->request_class & REQUEST_CLASS_MANIFEST) != 0))
 		{
 			ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
 				"ngx_http_vod_handler: bypassing response cache for mapping-dependent request (vod_mapping_cache is off)");
