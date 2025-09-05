@@ -5705,53 +5705,63 @@ ngx_http_vod_handler(ngx_http_request_t *r)
 
 		ngx_md5_final(request_key, &md5);
 
-		// try to fetch from cache
-		cache_type = ngx_buffer_cache_fetch_copy_perf(
-			r,
-			perf_counters,
-			conf->response_cache,
-			CACHE_TYPE_COUNT,
-			request_key,
-			&cache_buffer);
-		if (cache_type >= 0 &&
-			cache_buffer.len > sizeof(cache_header))
+		// check if we should bypass response cache for mapping-dependent requests when vod_mapping_cache is off
+		if (conf->mapping_cache[0] == NULL && 
+			request->handle_metadata_request != NULL)
 		{
-			ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-				"ngx_http_vod_handler: response cache hit, size is %uz", cache_buffer.len);
-
-			// extract the content type
-			ngx_memcpy(&cache_header, cache_buffer.data, sizeof(cache_header));
-			cache_buffer.data += sizeof(cache_header);
-			cache_buffer.len -= sizeof(cache_header);
-
-			content_type.data = cache_buffer.data;
-			content_type.len = cache_header.content_type_len;
-
-			if (cache_buffer.len >= content_type.len)
-			{
-				// extract the response buffer
-				response.data = cache_buffer.data + content_type.len;
-				response.len = cache_buffer.len - content_type.len;
-
-				// update request flags
-				r->root_tested = !r->error_page;
-				r->allow_ranges = 1;
-
-				// return the response
-				rc = ngx_http_vod_send_header(r, response.len, &content_type, cache_header.media_set_type, request);
-				if (rc != NGX_OK)
-				{
-					return rc;
-				}
-
-				rc = ngx_http_vod_send_response(r, &response, NULL);
-				goto done;
-			}
+			ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+				"ngx_http_vod_handler: bypassing response cache for mapping-dependent request (vod_mapping_cache is off)");
 		}
 		else
 		{
-			ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-				"ngx_http_vod_handler: response cache miss");
+			// try to fetch from cache
+			cache_type = ngx_buffer_cache_fetch_copy_perf(
+				r,
+				perf_counters,
+				conf->response_cache,
+				CACHE_TYPE_COUNT,
+				request_key,
+				&cache_buffer);
+			if (cache_type >= 0 &&
+				cache_buffer.len > sizeof(cache_header))
+			{
+				ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+					"ngx_http_vod_handler: response cache hit, size is %uz", cache_buffer.len);
+
+				// extract the content type
+				ngx_memcpy(&cache_header, cache_buffer.data, sizeof(cache_header));
+				cache_buffer.data += sizeof(cache_header);
+				cache_buffer.len -= sizeof(cache_header);
+
+				content_type.data = cache_buffer.data;
+				content_type.len = cache_header.content_type_len;
+
+				if (cache_buffer.len >= content_type.len)
+				{
+					// extract the response buffer
+					response.data = cache_buffer.data + content_type.len;
+					response.len = cache_buffer.len - content_type.len;
+
+					// update request flags
+					r->root_tested = !r->error_page;
+					r->allow_ranges = 1;
+
+					// return the response
+					rc = ngx_http_vod_send_header(r, response.len, &content_type, cache_header.media_set_type, request);
+					if (rc != NGX_OK)
+					{
+						return rc;
+					}
+
+					rc = ngx_http_vod_send_response(r, &response, NULL);
+					goto done;
+				}
+			}
+			else
+			{
+				ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+					"ngx_http_vod_handler: response cache miss");
+			}
 		}
 	}
 
