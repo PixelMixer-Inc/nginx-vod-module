@@ -625,7 +625,25 @@ m3u8_builder_build_index_playlist(
 			p = vod_copy(p, conf->encryption_key_file_name.data, conf->encryption_key_file_name.len);
 			if (media_set->has_multi_sequences)
 			{
-				p = vod_sprintf(p, "-f%uD", media_set->sequences->index + 1);
+				// Try to use source clip ID if available, otherwise fallback to sequence index
+				if (media_set->sequences->clips && media_set->sequences->clips[0] && 
+					media_set->sequences->clips[0]->type == MEDIA_CLIP_SOURCE)
+				{
+					media_clip_source_t* source_clip = (media_clip_source_t*)media_set->sequences->clips[0];
+					if (source_clip->id.len > 0)
+					{
+						p = vod_copy(p, "-f", 2);
+						p = vod_copy(p, source_clip->id.data, source_clip->id.len);
+					}
+					else
+					{
+						p = vod_sprintf(p, "-f%uD", media_set->sequences->index + 1);
+					}
+				}
+				else
+				{
+					p = vod_sprintf(p, "-f%uD", media_set->sequences->index + 1);
+				}
 			}
 			p = vod_copy(p, encryption_key_extension, sizeof(encryption_key_extension) - 1);
 		}

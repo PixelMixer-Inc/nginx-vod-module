@@ -384,7 +384,25 @@ manifest_utils_append_tracks_spec(
 				}
 				else
 				{
-					p = vod_sprintf(p, "-f%uD", last_sequence_index + 1);
+					// Try to use source clip ID if available, otherwise fallback to sequence index
+					if (cur_sequence->clips && cur_sequence->clips[0] && 
+						cur_sequence->clips[0]->type == MEDIA_CLIP_SOURCE)
+					{
+						media_clip_source_t* source_clip = (media_clip_source_t*)cur_sequence->clips[0];
+						if (source_clip->id.len > 0)
+						{
+							p = vod_copy(p, "-f", 2);
+							p = vod_copy(p, source_clip->id.data, source_clip->id.len);
+						}
+						else
+						{
+							p = vod_sprintf(p, "-f%uD", last_sequence_index + 1);
+						}
+					}
+					else
+					{
+						p = vod_sprintf(p, "-f%uD", last_sequence_index + 1);
+					}
 				}
 			}
 		}
