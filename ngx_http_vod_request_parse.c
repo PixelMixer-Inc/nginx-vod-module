@@ -317,60 +317,27 @@ ngx_http_vod_parse_uri_file_name(
 
 		for (;;)
 		{
-			if (*start_pos == 'f')
-			{
-				// sequence index
-				start_pos++;		// skip the f
+		// sequence id (both 'f' and 's' are treated as string IDs)
+		start_pos++;		// skip the f or s
 
-				if (start_pos >= end_pos || *start_pos < '1' || *start_pos > '9')
-				{
-					ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-						"ngx_http_vod_parse_uri_file_name: missing index following sequence selector");
-					return ngx_http_vod_status_to_ngx_error(r, VOD_BAD_REQUEST);
-				}
+		if (cur_sequence_id >= last_sequence_id)
+		{
+			ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+				"ngx_http_vod_parse_uri_file_name: the number of sequence ids exceeds the limit");
+			return ngx_http_vod_status_to_ngx_error(r, VOD_BAD_REQUEST);
+		}
 
-				sequence_index = *start_pos - '0';
-				start_pos++;		// skip the digit
+		cur_sequence_id->data = start_pos;
 
-				if (start_pos < end_pos && *start_pos >= '0' && *start_pos <= '9')
-				{
-					sequence_index = sequence_index * 10 + *start_pos - '0';
-					if (sequence_index > MAX_SEQUENCES)
-					{
-						ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-							"ngx_http_vod_parse_uri_file_name: sequence index too big");
-						return ngx_http_vod_status_to_ngx_error(r, VOD_BAD_REQUEST);
-					}
-					start_pos++;		// skip the digit
-				}
+		while (start_pos < end_pos && *start_pos != '-')
+		{
+			start_pos++;
+		}
 
-				sequence_index--;		// Note: sequence_index cannot be 0 here
-				result->sequences_mask |= (1 << sequence_index);
-			}
-			else
-			{
-				// sequence id
-				start_pos++;		// skip the s
+		cur_sequence_id->len = start_pos - cur_sequence_id->data;
 
-				if (cur_sequence_id >= last_sequence_id)
-				{
-					ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-						"ngx_http_vod_parse_uri_file_name: the number of sequence ids exceeds the limit");
-					return ngx_http_vod_status_to_ngx_error(r, VOD_BAD_REQUEST);
-				}
-
-				cur_sequence_id->data = start_pos;
-
-				while (start_pos < end_pos && *start_pos != '-')
-				{
-					start_pos++;
-				}
-
-				cur_sequence_id->len = start_pos - cur_sequence_id->data;
-
-				cur_sequence_id++;
-				sequence_index = -(cur_sequence_id - result->sequence_ids);
-			}
+		cur_sequence_id++;
+		sequence_index = -(cur_sequence_id - result->sequence_ids);
 
 			skip_dash(start_pos, end_pos);
 
