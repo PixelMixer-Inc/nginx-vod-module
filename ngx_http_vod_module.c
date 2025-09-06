@@ -5705,6 +5705,14 @@ ngx_http_vod_handler(ngx_http_request_t *r)
 
 		ngx_md5_final(request_key, &md5);
 
+		// debug logging before cache bypass check
+		ngx_log_debug5(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+			"ngx_http_vod_handler: cache bypass check - mapping_cache[0]=%p, request=%p, request_class=%d, handle_metadata_request=%p, request_flags=%d",
+			conf->mapping_cache[0], request, 
+			request ? (int)request->request_class : -1,
+			request ? request->handle_metadata_request : NULL,
+			request ? (int)request->flags : -1);
+
 		// check if we should bypass response cache for master playlist requests when vod_mapping_cache is off
 		if (conf->mapping_cache[0] == NULL && 
 			request != NULL && 
@@ -5716,6 +5724,12 @@ ngx_http_vod_handler(ngx_http_request_t *r)
 		}
 		else
 		{
+			// debug logging before cache fetch
+			ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+				"ngx_http_vod_handler: attempting cache fetch - response_cache=%p, cache_count=%d, request_key_first_bytes=%02x%02x%02x%02x",
+				conf->response_cache, CACHE_TYPE_COUNT,
+				request_key[0], request_key[1], request_key[2], request_key[3]);
+
 			// try to fetch from cache
 			cache_type = ngx_buffer_cache_fetch_copy_perf(
 				r,
