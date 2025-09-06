@@ -5724,11 +5724,10 @@ ngx_http_vod_handler(ngx_http_request_t *r)
 		}
 		else
 		{
-			// debug logging before cache fetch
-			ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-				"ngx_http_vod_handler: attempting cache fetch - response_cache=%p, cache_count=%d, request_key_first_bytes=%02x%02x%02x%02x",
-				conf->response_cache, CACHE_TYPE_COUNT,
-				request_key[0], request_key[1], request_key[2], request_key[3]);
+		// debug logging before cache fetch
+		ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+			"ngx_http_vod_handler: attempting cache fetch - response_cache=%p, cache_count=%d",
+			conf->response_cache, CACHE_TYPE_COUNT);
 
 			// try to fetch from cache
 			cache_type = ngx_buffer_cache_fetch_copy_perf(
